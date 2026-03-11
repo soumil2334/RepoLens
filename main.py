@@ -1,6 +1,11 @@
-# %%
+
 import requests
 import base64
+import os
+import openai
+from openai import AsyncOpenAI
+from dotenv import load_dotenv
+from openai.types.responses import ResponseTextDeltaEvent
 
 url1= "https://api.github.com/repos/zju3dv/pvnet/contents/run.py?ref=master"
 response = requests.get(url1)
@@ -10,7 +15,7 @@ encoded_content = data['content']
 decoded_content = base64.b64decode(encoded_content).decode("utf-8")
 print(decoded_content)
 
-# %%
+
 import requests
 import base64
 
@@ -25,7 +30,7 @@ for content in data:
     print(content)
 
 
-# %%
+
 import requests
 import base64
 
@@ -39,7 +44,7 @@ for content in data:
         print(True)
     print(content)
 
-# %%
+
 from pydantic import BaseModel, Field
 from typing import Optional
 import base64
@@ -161,7 +166,7 @@ def get_readme(user:str, repository_name:str):
 
 result=get_readme(user='soumil2334', repository_name='Youtube-Ask-Feature')
 
-# %%
+
 parent_agent_instruction='''
 You are a technical educator who creates in-depth tutorials for GitHub repositories.
 You have three tools available to explore a repository. You MUST follow this exact 
@@ -265,14 +270,9 @@ QUALITY REQUIREMENTS:
 )
 '''
 
-# %%
-import os
-import openai
-from openai import AsyncOpenAI
-from dotenv import load_dotenv
-from openai.types.responses import ResponseTextDeltaEvent
 
-# %%
+
+
 load_dotenv()
 client = AsyncOpenAI(
     api_key=os.getenv("OPENAI_API_KEY")
@@ -293,7 +293,7 @@ with trace('GitHub Repo Explainer'):
         if event.type=='raw_response_event' and isinstance(event.data, ResponseTextDeltaEvent):
             print(event.data.delta, end='')
 
-# %%
+
 
 
 
