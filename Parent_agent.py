@@ -6,8 +6,13 @@ from openai.types.responses import ResponseTextDeltaEvent
 from pydantic import BaseModel, Field
 from typing import Optional
 import base64
+from rich.console import Console
+from rich.markdown import Markdown
 from agents import Agent, Runner, trace, OpenAIChatCompletionsModel, function_tool
 from Function_tools import get_readme, return_file_structure, Navigate_repo
+from save_as_pdf import save_as_pdf
+
+console=Console()
 
 parent_agent_instruction='''
 
@@ -196,6 +201,7 @@ model = OpenAIChatCompletionsModel(
 tools=[get_readme, return_file_structure, Navigate_repo]
 Parent_Agent=Agent(name='Parent Agent', instructions=parent_agent_instruction, tools=tools, model=model)
 
+repo_markdown=[]
 
 async def parent_agent(message : str):
     with trace('GitHub Repo Explainer'):
@@ -203,3 +209,8 @@ async def parent_agent(message : str):
         async for event in result.stream_events():
             if event.type=='raw_response_event' and isinstance(event.data, ResponseTextDeltaEvent):
                 print(event.data.delta, end='')
+                repo_markdown.append(event.data.delta)
+
+    repo_text=''.join(repo_markdown)
+    console.print(Markdown(repo_text))
+    
