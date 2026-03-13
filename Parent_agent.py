@@ -12,6 +12,7 @@ from rich.markdown import Markdown
 from agents import Agent, Runner, trace, OpenAIChatCompletionsModel, function_tool
 from Function_tools import get_readme, return_file_structure, Navigate_repo
 from save_as_pdf import save_as_pdf
+from pathlib import Path
 
 console=Console()
 
@@ -204,15 +205,20 @@ Parent_Agent=Agent(name='Parent Agent', instructions=parent_agent_instruction, t
 
 repo_markdown=[]
 
-async def parent_agent(message : str):
+async def parent_agent(message : str, filename:str):
     with trace('GitHub Repo Explainer'):
         result = Runner.run_streamed(starting_agent=Parent_Agent, input=message)
         async for event in result.stream_events():
             if event.type=='raw_response_event' and isinstance(event.data, ResponseTextDeltaEvent):
-                print(event.data.delta, end='')
+                yield event.data.delta
                 repo_markdown.append(event.data.delta)
 
     tut_text=''.join(repo_markdown)
-    console.print(Markdown(tut_text))
-    save_as_pdf(tutorial_text=tut_text, filename=f'{uuid.uuid4()}.pdf')
-    
+    text_path=Path(filename)
+    text_path.mkdir(exist_ok=True)
+    save_path=text_path/'repo.txt'
+
+    with open(save_path, 'w', encoding='utf-8') as f:
+        f.write(tut_text)
+        
+    save_as_pdf(tutorial_text=tut_text, filename=filename)

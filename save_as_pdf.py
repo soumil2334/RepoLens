@@ -1,27 +1,44 @@
-import markdown
-from weasyprint import HTML
+import pdfkit
+import markdown as md_converter
+from pathlib import Path
 
 def save_as_pdf(tutorial_text: str, filename: str):
-    # Convert markdown to HTML first
-    html_content = markdown.markdown(
+    # Convert markdown to HTML
+    html_content = md_converter.markdown(
         tutorial_text,
         extensions=['fenced_code', 'tables', 'codehilite']
     )
     
-    # Wrap in basic styled HTML
     styled_html = f"""
     <html>
     <head>
         <style>
             body {{ font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }}
             code {{ background: #f4f4f4; padding: 2px 6px; border-radius: 3px; }}
-            pre  {{ background: #f4f4f4; padding: 15px; border-radius: 5px; overflow-x: auto; }}
+            pre  {{ background: #f4f4f4; padding: 15px; border-radius: 5px; }}
             h1, h2, h3 {{ color: #2c3e50; }}
         </style>
     </head>
     <body>{html_content}</body>
     </html>
     """
+
+    # Point to wkhtmltopdf install location
+    config = pdfkit.configuration(
+        wkhtmltopdf=r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
+    )
     
-    HTML(string=styled_html).write_pdf(filename)
-    print(f"Saved to {filename}")
+    save_path=Path('repo_files')
+    save_path.mkdir(parents=True, exist_ok=True)
+    repo_pdf=save_path/filename
+
+    pdfkit.from_string(
+    styled_html, 
+    repo_pdf, 
+    configuration=config,
+    options={
+        'encoding': 'UTF-8',
+        'enable-local-file-access': None
+    }
+)
+    print(f"Saved to {save_path}")
