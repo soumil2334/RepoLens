@@ -205,7 +205,7 @@ Parent_Agent=Agent(name='Parent Agent', instructions=parent_agent_instruction, t
 
 repo_markdown=[]
 
-async def parent_agent(message : str, filename:str):
+async def parent_agent(message : str, filename:Path):
     with trace('GitHub Repo Explainer'):
         result = Runner.run_streamed(starting_agent=Parent_Agent, input=message)
         async for event in result.stream_events():

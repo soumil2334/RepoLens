@@ -2,7 +2,7 @@ import pdfkit
 import markdown as md_converter
 from pathlib import Path
 
-def save_as_pdf(tutorial_text: str, filename: str):
+def save_as_pdf(tutorial_text: str, filename: Path):
     # Convert markdown to HTML
     html_content = md_converter.markdown(
         tutorial_text,
@@ -28,9 +28,9 @@ def save_as_pdf(tutorial_text: str, filename: str):
         wkhtmltopdf=r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
     )
     
-    save_path=Path('repo_files')
+    save_path=Path(filename)
     save_path.mkdir(parents=True, exist_ok=True)
-    repo_pdf=save_path/filename
+    repo_pdf=save_path/'repo.pdf'
 
     pdfkit.from_string(
     styled_html, 

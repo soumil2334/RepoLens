@@ -2,8 +2,11 @@ from pydantic import BaseModel, Field
 import requests
 from typing import Optional
 import base64
+from chunk_ast import chunk_tree
+from tree_sitter_languages import get_parser
 from agents import Agent, Runner, trace, OpenAIChatCompletionsModel, function_tool
 import os
+from chroma_db import add_chunks_to_chroma, collection
 
 github_access_token=os.getenv('Github_access_token')
 HEADERS = {"Authorization": github_access_token}
@@ -11,47 +14,6 @@ HEADERS = {"Authorization": github_access_token}
 class Navigate_repo_class(BaseModel):
     list_url: Optional[list[dict]]
     content : Optional[str]
-
-@function_tool
-def Navigate_repo(url:str, file_type : str)-> Navigate_repo_class:
-    '''
-    When to call this function->
-    One you have to navigate a tree or to get the content of blob
-
-    What to pass in this function->
-    1. url : GitHub API contents URL only. Must follow this format:
-         https://api.github.com/repos/{user}/{repo}/contents/{path}
-         
-         NOT the HTML url (https://github.com/...) 
-         Use URLs returned by return_file_structure or previous Navigate_repo calls.
-         Never construct URLs manually.
-
-    2. file_type : the type of the file the url is pointing towards (blob/tree)
-    
-    What does the function return->
-    list_url : list of the child URLs present within the given url
-    content : if the url file_type is a blob then return the content
-
-    What to do next after calling this function->
-    file_type='tree' → make parallel Navigate_repo calls on each URL in list_url
-    file_type='blob' → pass content to the Parent agent, continue remaining trees
-    '''
-
-
-    response=requests.get(url, headers=HEADERS)
-    Data=response.json()
-    
-    content=None
-    response_list=[]
-
-    if file_type=='tree':
-        for data in Data:
-            response_list.append({'name' : data.get('name'), 'URL' : data.get('url')})
-
-    if file_type=='blob':
-        content=base64.b64decode(Data['content']).decode("utf-8")
-
-    return Navigate_repo_class(list_url=response_list, content=content)
 
 @function_tool
 def return_file_structure(user: str, repository_name:str, branch: str):
@@ -119,3 +81,73 @@ def get_readme(user:str, repository_name:str):
             content=base64.b64decode(content).decode("utf-8")
 
     return content
+
+
+@function_tool
+def Navigate_repo(url:str, file_type : str)-> Navigate_repo_class:
+    '''
+    When to call? ->
+    One you have to navigate a tree or to get the content of blob
+
+    What to pass in the function?->
+    1. url : GitHub API contents URL only. Must follow this format:
+         https://api.github.com/repos/{user}/{repo}/contents/{path}
+         
+         NOT the HTML url (https://github.com/...) 
+         Use URLs returned by return_file_structure or previous Navigate_repo calls.
+         Never construct URLs manually.
+
+    2. file_type : the type of the file the url is pointing towards (blob/tree)
+    
+    What does the function return->
+    list_url : list of the child URLs present within the given url
+    content : if the url file_type is a blob then return the content
+
+    After calling this function? ->
+    file_type='tree' → make parallel Navigate_repo calls on each URL in list_url
+    file_type='blob' → Call the create_chunk function tool and after creating chunks, pass content to the Parent agent, continue remaining trees. 
+    '''
+
+
+    response=requests.get(url, headers=HEADERS)
+    Data=response.json()
+    
+    content=None
+    response_list=[]
+
+    if file_type=='tree':
+        for data in Data:
+            response_list.append({'name' : data.get('name'), 'URL' : data.get('url')})
+
+    if file_type=='blob':
+        content=base64.b64decode(Data['content']).decode("utf-8")
+        
+
+    return Navigate_repo_class(list_url=response_list, content=content)
+
+
+@function_tool
+def create_chunks(content : str, language : str, filename:str, VectorDB_path : str):
+    '''
+    When to call:
+    After Navigation_repo, to store the content as chunks in the Vector DB
+
+    What to pass:
+    1. content : this represents the content sent by the Navigation_repo.
+    2. language : the coding language used in the content e.g.(Python, Java, C++)
+    3. filename : the filename of the content as given in the repo. e.g. for url : https://api.github.com/repos/zju3dv/pvnet/contents/run.py?ref=master filename is 'run.py'
+    3. VectorDB_path : use the name of the repo exactly in the same format for vector DB path
+
+    What does the funcition return:
+    The fuction tool is used for creating chunks and storing it in Vector DB
+
+    After calling the function:
+    After calling the function continue the Navigation_repo to explore the rest of the repository
+    '''
+    parser = get_parser(language)
+    tree = parser.parse(bytes(content, "utf8"))
+    root = tree.root_node
+
+    chunks = chunk_tree(content, "python", "save_as_pdf.py")
+    
+    add_chunks_to_chroma(chunks=chunks, collection=collection)
