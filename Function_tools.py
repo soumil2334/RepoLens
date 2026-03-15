@@ -6,8 +6,7 @@ from chunk_ast import chunk_tree
 from tree_sitter_languages import get_parser
 from agents import Agent, Runner, trace, OpenAIChatCompletionsModel, function_tool
 import os
-from chroma_db import add_chunks_to_chroma, collection
-
+from Qdrant_db import store_in_Qdrant
 github_access_token=os.getenv('Github_access_token')
 HEADERS = {"Authorization": github_access_token}
 
@@ -24,7 +23,7 @@ def return_file_structure(user: str, repository_name:str, branch: str):
     What to pass in this function->
     1. user : owner of the repository
     2. repository_name : repository name as given on GitHub
-    3. branch : e.g. (main, master)
+    3. branch : e.g. (main or master)
     ** try running for main if it returns error try running for master
     
     What does the function return->
@@ -89,6 +88,11 @@ def Navigate_repo(url:str, file_type : str)-> Navigate_repo_class:
     When to call? ->
     One you have to navigate a tree or to get the content of blob
 
+    When not to call ->
+    Do NOT call this tool if the blob is not a source code file.
+    Do NOT call this tool for files such as:
+    README.md, LICENSE, .gitignore, images (.png, .jpg), PDFs, videos, binaries, or documentation files.
+    
     What to pass in the function?->
     1. url : GitHub API contents URL only. Must follow this format:
          https://api.github.com/repos/{user}/{repo}/contents/{path}
@@ -127,7 +131,7 @@ def Navigate_repo(url:str, file_type : str)-> Navigate_repo_class:
 
 
 @function_tool
-def create_chunks(content : str, language : str, filename:str, VectorDB_path : str):
+def create_chunks(content : str, language : str, filename:str):
     '''
     When to call:
     After Navigation_repo, to store the content as chunks in the Vector DB
@@ -135,19 +139,18 @@ def create_chunks(content : str, language : str, filename:str, VectorDB_path : s
     What to pass:
     1. content : this represents the content sent by the Navigation_repo.
     2. language : the coding language used in the content e.g.(Python, Java, C++)
-    3. filename : the filename of the content as given in the repo. e.g. for url : https://api.github.com/repos/zju3dv/pvnet/contents/run.py?ref=master filename is 'run.py'
-    3. VectorDB_path : use the name of the repo exactly in the same format for vector DB path
-
+    3. filename : name of the file as given in the repo from where the content is read. e.g. for url : https://api.github.com/repos/zju3dv/pvnet/contents/run.py?ref=master filename is 'run.py'
+    
     What does the funcition return:
     The fuction tool is used for creating chunks and storing it in Vector DB
 
     After calling the function:
     After calling the function continue the Navigation_repo to explore the rest of the repository
     '''
-    parser = get_parser(language)
-    tree = parser.parse(bytes(content, "utf8"))
-    root = tree.root_node
-
-    chunks = chunk_tree(content, "python", "save_as_pdf.py")
+    try:
+        chunks = chunk_tree(content, language.lower(), file_name=filename)
     
-    add_chunks_to_chroma(chunks=chunks, collection=collection)
+        store_in_Qdrant(chunks=chunks)
+        return('Created a chunk')
+    except Exception as e:
+        return('Error e occured')
