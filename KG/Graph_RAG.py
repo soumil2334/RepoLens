@@ -3,7 +3,8 @@ from langchain_neo4j import Neo4jGraph
 from dotenv import load_dotenv
 from qdrant_client.models import Filter, FieldCondition, MatchValue
 from qdrant_client import QdrantClient
-from create_prompt import build_prompt
+from qdrant_client.models import PayloadSchemaType
+from KG.create_prompt import build_prompt
 import os
 load_dotenv()
 client_openai = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
@@ -24,9 +25,14 @@ def Graph_Query_Qdrant(message:str):
             model="text-embedding-3-small",
             input=message)
     
+    client.create_payload_index(
+        collection_name="documents",
+        field_name="Source_type",
+        field_schema=PayloadSchemaType.KEYWORD)
+
     results = client.query_points(
         collection_name="documents",
-        query_vector=message_embedding,
+        query=message_embedding.data[0].embedding,
         query_filter=Filter(
             must=[
                 FieldCondition(
@@ -35,7 +41,7 @@ def Graph_Query_Qdrant(message:str):
                 )
             ]
         ),
-        limit=6
+        limit=3
     )
     return results
 
@@ -44,9 +50,11 @@ def traversal_query(results, message:str):
     code_results=[]
     graph_data=[]
 
-    for result in results:
-        graph_metadata=result.payload['String_GraphDoc']
-        graph_data.append(graph_metadata)
+    for result in results.points:
+        graph_file=result.payload['file']
+        graph_name=result.payload['name']
+        graph_data.append(str(f'file name : {graph_file}'))
+        graph_data.append(str(f'name : {graph_name}'))
 
         code_text=result.payload['Code']
         code_results.append(code_text)

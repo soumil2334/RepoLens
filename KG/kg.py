@@ -4,9 +4,17 @@ from langchain_openai import ChatOpenAI
 from langchain_core.documents import Document
 from dotenv import load_dotenv
 from qdrant_client import QdrantClient
+from qdrant_client.models import PointStruct
+import uuid
 import os
 import asyncio
 load_dotenv()
+from KG.graph_docs_Qdrant import create_string_payload
+import logging
+
+from openai import OpenAI
+
+client_openai = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
 client = QdrantClient(
     url=os.getenv('QDRANT_CLUSTER'),
@@ -31,8 +39,9 @@ llm_transformer=LLMGraphTransformer(llm=llm)
 async def Create_KG(collection_name:str='documents'):
     points=[]
     offset=None
-
+    i=0
     while True:
+        i+=1
         result, offset= client.scroll(
             collection_name=collection_name,
             limit=50,
@@ -40,6 +49,7 @@ async def Create_KG(collection_name:str='documents'):
             with_vectors=False,
             offset=offset
         )
+        logging.info(f'point loaded {i}')
         points.extend(result)
 
         if offset is None:
@@ -47,16 +57,14 @@ async def Create_KG(collection_name:str='documents'):
     
     document=[]
 
-    for point in points:
+    for i, point in enumerate(points):
+
         payload=point.payload
         doc=Document(
             page_content=payload.get('text'),
-            metadata={
-                'file':payload.get('file', "unknown"),
-                'node_type': payload.get('node_type', "unknown"),
-                'name' : payload.get('name', "unknown"),
-                'start_line':payload.get('start_line',0),
-                'end_line':payload.get('end_line',0)
+            metadata={**payload,
+
+                'Source_type' : 'Graph_Document',
             })
         document.append(doc)
 
@@ -64,19 +72,42 @@ async def Create_KG(collection_name:str='documents'):
     graph_documents=[]
     async def semaphore_doc_processing(doc):
         async with sempaphore:
+            logging.info(f'Creating Graph Doc')
             return await llm_transformer.aconvert_to_graph_documents([doc])
         
     tasks=[semaphore_doc_processing(doc) for doc in document]
     graph_documents=await asyncio.gather(*tasks)
+    list_graph_docs=[graph[0] for graph in graph_documents]
+    return list_graph_docs
 
-    return graph_documents
 
-    
-
-def Store_graph(documents):
+def Store_graph_Neo4j(documents):
     graph.add_graph_documents(
         documents,
         baseEntityLabel=True,
         include_source=True
     )
 
+def Store_graph_Qdrant(graph_docs, collection_name='documents'):
+    list_graph_docs=create_string_payload(graph_docs)
+    points=[]
+    
+    for graph_doc in list_graph_docs:
+        text=graph_doc.get('TEXT')
+        response = client_openai.embeddings.create(
+            model="text-embedding-3-small",
+            input=text)
+
+        payload=graph_doc.get('PAYLOAD')
+        id=uuid.uuid4()
+        points.append(
+            PointStruct(
+                id=str(id),
+                vector=response.data[0].embedding,
+                payload=payload
+            )
+        )
+    client.upsert(
+    collection_name=collection_name,
+    points=points)
+    logging.info('Graph Docs stored in Qdrant')
