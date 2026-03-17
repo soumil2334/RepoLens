@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environment
+myenv/
+venv/
+.venv/
+env/
+
+# Environment files — never bake secrets into the image
+.env
+.env.*
+
+# Job folders — runtime data, not part of the image
+*/repo.txt
+*/repo.pdf
+*/meta.json
+url_index.json
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# Git
+.git/
+.gitignore
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Test files
+tests/
+test_*
+*_test.py

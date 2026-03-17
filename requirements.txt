@@ -1,46 +1,71 @@
 # FastAPI + server
-fastapi
-uvicorn[standard]
-python-multipart
+fastapi==0.135.1
+uvicorn==0.41.0
+python-multipart==0.0.22
+starlette==0.52.1
+websockets==16.0
 
 # OpenAI
-openai
-openai-agents
+openai==2.26.0
+openai-agents==0.11.1
 
 # LangChain
-langchain
-langchain-core
-langchain-openai
-langchain-experimental
-langchain-neo4j
-langchain-community
+langchain==1.2.12
+langchain-core==1.2.19
+langchain-openai==1.1.11
+langchain-experimental==0.4.1
+langchain-neo4j==0.8.0
+langchain-community==0.4.1
+langchain-text-splitters==1.1.1
+langsmith==0.7.17
 
 # Graph database
-neo4j
+neo4j==6.1.0
 
 # Vector database
-qdrant-client
+qdrant-client==1.17.1
 
 # Code chunking
-tree-sitter
-tree-sitter-languages
+tree-sitter==0.21.3
+tree-sitter-languages==1.10.2
+tree-sitter-python==0.25.0
+tree-sitter-javascript==0.25.0
+tree-sitter-typescript==0.23.2
+tree-sitter-java==0.23.5
+tree-sitter-cpp==0.23.4
+tree-sitter-go==0.25.0
+tree-sitter-rust==0.24.0
 
 # PDF generation
-pdfkit
-markdown
-Pygments
+pdfkit==1.0.0
+Markdown==3.10.2
+Pygments==2.19.2
 
-# HTTP requests (GitHub API)
-requests
+# HTTP requests
+requests==2.32.5
 
 # Environment variables
-python-dotenv
+python-dotenv==1.2.2
 
 # Pydantic
-pydantic
+pydantic==2.12.5
+pydantic-settings==2.13.1
 
 # Rich terminal output
-rich
+rich==14.3.3
 
-# AWS / Cloudflare R2 (if using cloud storage)
-boto3
+# AWS / Cloudflare R2
+boto3==1.42.69
+botocore==1.42.69
+
+# Async
+anyio==4.12.1
+httpx==0.28.1
+aiohttp==3.13.3
+
+# Misc utilities
+tiktoken==0.12.0
+tenacity==9.1.4
+PyYAML==6.0.3
+packaging==26.0
+typing_extensions==4.15.0
