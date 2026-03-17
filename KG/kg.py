@@ -32,7 +32,8 @@ sempaphore=asyncio.Semaphore(3)
 import os
 load_dotenv()
 OPENAI_KEY=os.getenv('OPENAI_API_KEY')
-
+   
+   
 llm=ChatOpenAI(model='gpt-4o-mini', api_key=OPENAI_KEY, temperature=0)
 
 llm_transformer=LLMGraphTransformer(llm=llm)
